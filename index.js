@@ -13,7 +13,11 @@ type Query{
     message: [Message!]!
     post: [Post!]!
     like: [Like!]!
-    
+    getConversation(input: queryConversation): [Message!]
+}
+input queryConversation{
+    id:Int!
+    id2:Int!
 }
 
 type User{
@@ -58,31 +62,83 @@ type Connection{
     user2: User!
 }
 
-
 input CreateUser {
     firstName: String!
     lastName: String!
     email: String!
 }
 
-input CreateMessage{
-    senderId: Int!, receiverId: Int!, content: String!
+input CreateMessage {
+    senderId: Int!
+    receiverId: Int!
+    content: String!
 }
 
-input CreateConnexion{
-    user1Id: Int!, user2Id: Int!
+input CreateConnexion {
+    user1Id: Int!
+    user2Id: Int!
 }
 
-input CreateComment{
-    postId: Int!, authorId: Int!, content: String!
+input CreateComment {
+    postId: Int!
+    authorId: Int!
+    content: String!
 }
 
-input CreatePost{
-    authorId: Int!, content: String!
+input CreatePost {
+    authorId: Int!
+    content: String!
 }
 
-input CreateLike{
-    userId: Int!, postId: Int!
+input CreateLike {
+    userId: Int!
+    postId: Int!
+}
+
+input UpdateUser {
+    id: Int!
+    firstName: String
+    lastName: String
+    email: String
+}
+
+input UpdateMessage {
+    id: Int!
+    content: String
+}
+
+input UpdateComment {
+    id: Int!
+    content: String
+}
+
+input UpdatePost {
+    id: Int!
+    content: String
+}
+
+input DeleteUser {
+    id: Int!
+}
+
+input DeleteMessage {
+    id: Int!
+}
+
+input DeleteConnection {
+    id: Int!
+}
+
+input DeleteComment {
+    id: Int!
+}
+
+input DeletePost {
+    id: Int!
+}
+
+input DeleteLike {
+    id: Int!
 }
 
 type Mutation {
@@ -92,6 +148,19 @@ type Mutation {
     createComment(input: CreateComment ): Comment!
     createPost(input: CreatePost ): Post!
     likePost(input: CreateLike ): Like!
+
+
+    updateUser(input: UpdateUser):User!
+    updateMessage(input: UpdateMessage):Message!
+    updateComment(input: UpdateComment):Comment!
+    updatePost(input: UpdatePost):Post!
+
+    deleteMessage(input: DeleteMessage):Message!
+    deleteUser(input: DeleteUser): User!
+    deleteConnection(input: DeleteConnection): Connection!
+    deleteComment(input: DeleteComment): Comment!
+    deletePost(input: DeletePost): Post!
+    deleteLike(input: DeleteLike): Like!
 }
 
 
@@ -150,16 +219,51 @@ const PostByUser = new DataLoader(async (ids) => {
     return ids.map((id)=> posts.filter((post) => post.authorId === id));
 });
 
+
+// Dataloader pour récupérer les messages entre deux utilisateurs
+const MessageByUser = new DataLoader(async (ids) => {
+    // Supposons que `ids` contienne des paires d'IDs sous forme de tableau de tableaux (ex : [[id1, id2], [id3, id4]])
+    const messages = await prisma.message.findMany({
+        where: {
+            OR: ids.map(([id1, id2]) => ([
+                { senderId: id1, receiverId: id2 },
+                { senderId: id2, receiverId: id1 }
+            ])).flat()  // Aplatir le tableau pour créer une seule condition OR
+        },
+    });
+
+    const messagesMap = new Map();
+
+    messages.forEach((message) => {
+        const key = `${message.senderId}_${message.receiverId}`;
+        if (!messagesMap.has(key)) {
+            messagesMap.set(key, []);
+        }
+        messagesMap.get(key).push(message);
+    });
+
+    // Renvoyez les messages pour chaque paire d'IDs en triant par createdAt
+    return ids.map(([id1, id2]) => {
+        const key = `${id1}_${id2}`;
+        const messagesForPair = messagesMap.get(key) || [];
+
+        // Tri des messages par createdAt
+        return messagesForPair.sort((a, b) =>  a.createdAt - b.createdAt);
+    });
+});
+
+
 const resolvers = {
     Query: {
         user: () => prisma.user.findMany(),
         message:() => prisma.message.findMany(),
         post: () => prisma.post.findMany(),
-        like:() => prisma.like.findMany()
+        like:() => prisma.like.findMany(),
+        getConversation:(_,{input}) => MessageByUser.load([input.id, input.id2])
     },
 
     User: {
-        connexion:( parent )   => UserByConnexion.load(parent.id), // TODO
+        connexion:( parent )   => UserByConnexion.load(parent.id),
         posts :(parent) => PostByID.load(parent.id),
     },
     
@@ -242,6 +346,102 @@ const resolvers = {
                     },
                 });
             },
+
+            updateUser: async (_, { input }) => {
+                return prisma.user.update({
+                    where: {
+                        id: input.id,
+                    },
+                    data: {
+                        firstName: input.firstName,
+                        lastName: input.lastName,
+                        email: input.email,
+                    },
+                });
+            },
+
+            updateMessage: async (_, { input }) => {
+                return prisma.message.update({
+                    where: {
+                        id: input.id,
+                    },
+                    data: {
+                        content: input.content,
+                    },
+                });
+            },
+
+            updateComment: async (_, { input }) => {
+                return prisma.comment.update({
+                    where: {
+                        id: input.id,
+                    },
+                    data: {
+                        content: input.content,
+                    },
+                });
+            },
+
+            updatePost: async (_, { input }) => {
+                return prisma.post.update({
+                    where: {
+                        id: input.id,
+                    },
+                    data: {
+                        content: input.content,
+                    },
+                });
+            },
+
+            deleteUser: async (_, { input }) => {
+                return prisma.user.delete({
+                    where: {
+                        id: input.id,
+                    },
+                });
+            },
+
+            deleteMessage: async (_, { input }) => {
+                return prisma.message.delete({
+                    where: {
+                        id: input.id,
+                    },
+                });
+            },
+
+            deleteConnection: async (_, { input }) => {
+                return prisma.connection.delete({
+                    where: {
+                        id: input.id,
+                    },
+                });
+            },
+
+            deleteComment: async (_, { input }) => {
+                return prisma.comment.delete({
+                    where: {
+                        id: input.id,
+                    },
+                });
+            },
+
+            deletePost: async (_, { input }) => {
+                return prisma.post.delete({
+                    where: {
+                        id: input.id,
+                    },
+                });
+            },
+
+            deleteLike: async (_, { input }) => {
+                return prisma.like.delete({
+                    where: {
+                        id: input.id,
+                    },
+                });
+            },
+
+
         },
 
 }

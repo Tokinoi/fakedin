@@ -1,5 +1,3 @@
-// schema.prisma
-
 datasource db {
   provider = "sqlite"
   url      = "file:./dev.db"
@@ -14,20 +12,20 @@ model User {
   firstName        String
   lastName         String
   email            String       @unique
-  posts            Post[] // Relation avec les posts créés par l'utilisateur
-  comments         Comment[] // Relation avec les commentaires de l'utilisateur
-  likes            Like[] // Relation avec les likes de l'utilisateur
-  messagesSent     Message[]    @relation("messagesSent")
-  messagesReceived Message[]    @relation("messagesReceived")
-  connections      Connection[] @relation("UserConnections")
-  Connection       Connection[] @relation("UserConnections2")
+  posts            Post[]
+  comments         Comment[]
+  likes            Like[]
+  messagesSent     Message[]    @relation("messagesSent") // Suppression en Cascade
+  messagesReceived Message[]    @relation("messagesReceived") // Suppression en Cascade
+  connections      Connection[] @relation("UserConnections") // Suppression en Cascade
+  Connection       Connection[] @relation("UserConnections2") // Suppression en Cascade
 }
 
 model Connection {
   id        Int      @id @default(autoincrement())
-  user1     User     @relation("UserConnections2", fields: [user1Id], references: [id])
+  user1     User     @relation("UserConnections2", fields: [user1Id], references: [id], onDelete: Cascade) // Suppression en Cascade
   user1Id   Int
-  user2     User     @relation("UserConnections", fields: [user2Id], references: [id])
+  user2     User     @relation("UserConnections", fields: [user2Id], references: [id], onDelete: Cascade) // Suppression en Cascade
   user2Id   Int
   createdAt DateTime @default(now()) // Date à laquelle la connexion a été créée
 }
@@ -36,27 +34,27 @@ model Post {
   id        Int       @id @default(autoincrement())
   content   String
   createdAt DateTime  @default(now())
-  author    User      @relation(fields: [authorId], references: [id])
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade) // Suppression en Cascade
   authorId  Int
-  comments  Comment[] // Relation avec les commentaires du post
-  likes     Like[] // Relation avec les likes du post
+  comments  Comment[]
+  likes     Like[]
 }
 
 model Comment {
   id        Int      @id @default(autoincrement())
   content   String
   createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade) // Suppression en Cascade
   postId    Int
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade) // Suppression en Cascade
   authorId  Int
 }
 
 model Like {
   id     Int  @id @default(autoincrement())
-  post   Post @relation(fields: [postId], references: [id])
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade) // Suppression en Cascade
   postId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade) // Suppression en Cascade
   userId Int
 }
 
@@ -64,8 +62,8 @@ model Message {
   id         Int      @id @default(autoincrement())
   content    String
   createdAt  DateTime @default(now())
-  sender     User     @relation("messagesSent", fields: [senderId], references: [id])
+  sender     User     @relation("messagesSent", fields: [senderId], references: [id], onDelete: Cascade) // Suppression en Cascade
   senderId   Int
-  receiver   User     @relation("messagesReceived", fields: [receiverId], references: [id])
+  receiver   User     @relation("messagesReceived", fields: [receiverId], references: [id], onDelete: Cascade) // Suppression en Cascade
   receiverId Int
 }

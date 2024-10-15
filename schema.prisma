@@ -1,0 +1,71 @@
+// schema.prisma
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               Int          @id @default(autoincrement())
+  firstName        String
+  lastName         String
+  email            String       @unique
+  posts            Post[] // Relation avec les posts créés par l'utilisateur
+  comments         Comment[] // Relation avec les commentaires de l'utilisateur
+  likes            Like[] // Relation avec les likes de l'utilisateur
+  messagesSent     Message[]    @relation("messagesSent")
+  messagesReceived Message[]    @relation("messagesReceived")
+  connections      Connection[] @relation("UserConnections")
+  Connection       Connection[] @relation("UserConnections2")
+}
+
+model Connection {
+  id        Int      @id @default(autoincrement())
+  user1     User     @relation("UserConnections2", fields: [user1Id], references: [id])
+  user1Id   Int
+  user2     User     @relation("UserConnections", fields: [user2Id], references: [id])
+  user2Id   Int
+  createdAt DateTime @default(now()) // Date à laquelle la connexion a été créée
+}
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  content   String
+  createdAt DateTime  @default(now())
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  Int
+  comments  Comment[] // Relation avec les commentaires du post
+  likes     Like[] // Relation avec les likes du post
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    Int
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
+}
+
+model Like {
+  id     Int  @id @default(autoincrement())
+  post   Post @relation(fields: [postId], references: [id])
+  postId Int
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  content    String
+  createdAt  DateTime @default(now())
+  sender     User     @relation("messagesSent", fields: [senderId], references: [id])
+  senderId   Int
+  receiver   User     @relation("messagesReceived", fields: [receiverId], references: [id])
+  receiverId Int
+}

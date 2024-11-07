@@ -28,6 +28,8 @@ model Connection {
   user2     User     @relation("UserConnections", fields: [user2Id], references: [id], onDelete: Cascade) // Suppression en Cascade
   user2Id   Int
   createdAt DateTime @default(now()) // Date à laquelle la connexion a été créée
+
+  @@unique([user1Id, user2Id])
 }
 
 model Post {
@@ -56,6 +58,8 @@ model Like {
   postId Int
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade) // Suppression en Cascade
   userId Int
+
+  @@unique([userId, postId])
 }
 
 model Message {
